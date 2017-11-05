@@ -1,0 +1,22 @@
+CAPI=1
+[main]
+name = ::bonfire-spiflash:0
+
+simulators= ghdl isim
+
+[fileset rtl]
+files =  spi/wb_spi_interface.vhd spi/spimaster.vhd
+file_type=vhdlSource
+
+
+[fileset sim]
+files=spi/tb_spi_interface.vhd
+file_type=vhdlSource
+usage=sim
+scope = private
+
+
+[simulator]
+toplevel = tb_spi_interface
+
+
