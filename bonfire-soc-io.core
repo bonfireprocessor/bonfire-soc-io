@@ -1,18 +1,19 @@
 CAPI=1
 [main]
 name = ::bonfire-soc-io:0
-depend = ::bonfire-util:0 ::zpuino-uart:0
+depend = ::bonfire-util:0 ::zpuino-uart:0 ::bonfire-spiflash:0
 backend = ise
-simulators=isim
+simulators=ghdl isim
 
 [fileset rtl]
 files = io_intercon.vhd bonfire_soc_io.vhd
-
 file_type=vhdlSource
 
 
-
-
+[fileset sim]
+files=tb/tb_bonfire_soc_io.vhd
+file_type=vhdlSource
+scope = private
 
 [ise]
 family = spartan6
@@ -22,4 +23,4 @@ speed = -2
 top_module = bonfire_soc_io
 
 [simulator]
-toplevel = bonfire_soc_io
+toplevel = tb_bonfire_soc_io

@@ -97,9 +97,9 @@ BEGIN
 
    -- Stimulus process
    stim_proc: process
-   variable d,t : std_logic_vector(7 downto 0);
-   procedure wb_write(address : in std_logic_vector(wb_adr_in'range); data : in std_logic_vector(7 downto 0)) is
-        begin
+       variable d,t : std_logic_vector(7 downto 0);
+       procedure wb_write(address : in std_logic_vector(wb_adr_in'range); data : in std_logic_vector(7 downto 0)) is
+         begin
             wb_adr_in <= address;
             wait until rising_edge(clk_i);
             wb_dat_in <= data;
@@ -113,11 +113,11 @@ BEGIN
 
         end procedure;
 
-      procedure wb_read(address : in std_logic_vector(wb_adr_in'range);
+       procedure wb_read(address : in std_logic_vector(wb_adr_in'range);
                           data: out std_logic_vector(7 downto 0) )  is
-        begin
+         begin
             wb_adr_in <= address;
-         wait until rising_edge(clk_i);
+            wait until rising_edge(clk_i);
             wb_we_in <= '1';
             wb_cyc_in <= '1';
             wb_stb_in <= '1';

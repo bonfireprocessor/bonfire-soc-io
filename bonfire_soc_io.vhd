@@ -5,6 +5,7 @@ use ieee.std_logic_1164.all;
 
 entity bonfire_soc_io is
 generic (
+   CLK_FREQUENCY : natural := (96 * 1000000);
    NUM_GPIO_BITS : natural := 32;
    ADR_HIGH : natural := 25;
    UART_FIFO_DEPTH : natural := 6 -- log2 of  UART fifo depth
@@ -147,24 +148,48 @@ PORT MAP(
 
 uart_1: entity work.zpuino_uart
 GENERIC MAP (
-  bits => UART_FIFO_DEPTH 
+  bits => UART_FIFO_DEPTH
 )
 
 PORT MAP(
         wb_clk_i => clk_i,
         wb_rst_i => rst_i,
-        wb_dat_o =>  m_dat_i(1),
-        wb_dat_i =>  m_dat_o(1),
-        wb_adr_i =>  m_adr_o(1)(2 downto 2),
-        wb_we_i =>   m_we_o(1),
-        wb_cyc_i =>  m_cyc_o(1),
-        wb_stb_i =>  m_stb_o(1),
-        wb_ack_o =>  m_ack_i(1),
+        wb_dat_o =>  m_dat_i(2),
+        wb_dat_i =>  m_dat_o(2),
+        wb_adr_i =>  m_adr_o(2)(2 downto 2),
+        wb_we_i =>   m_we_o(2),
+        wb_cyc_i =>  m_cyc_o(2),
+        wb_stb_i =>  m_stb_o(2),
+        wb_ack_o =>  m_ack_i(2),
         wb_inta_o => open ,
         id => open,
         enabled => open,
         tx => uart1_txd,
         rx => uart1_rxd
+    );
+
+
+spi_flash: entity  work.wb_spi_interface
+GENERIC MAP (
+   CLK_FREQUENCY => CLK_FREQUENCY,
+   WB_DATA_WIDTH => 32,
+   ADR_HIGH => t_wbadr'high
+)
+PORT MAP(
+        clk_i => clk_i,
+        reset_i => rst_i,
+        slave_cs_o => flash_spi_cs,
+        slave_clk_o => flash_spi_clk,
+        slave_mosi_o => flash_spi_mosi,
+        slave_miso_i => flash_spi_miso,
+        irq => open,
+        wb_adr_in => m_adr_o(1),
+        wb_dat_in => m_dat_o(1),
+        wb_dat_out => m_dat_i(1),
+        wb_we_in =>  m_we_o(1),
+        wb_cyc_in => m_cyc_o(1),
+        wb_stb_in => m_stb_o(1),
+        wb_ack_out =>m_ack_i(1)
     );
 
 
