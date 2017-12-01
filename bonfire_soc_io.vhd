@@ -22,9 +22,9 @@ Port(
        uart1_rxd : in  std_logic :='1';
 
        -- GPIO
-       gpio_o : out std_logic_vector(NUM_GPIO_BITS downto 0);
-       gpio_i : in  std_logic_vector(NUM_GPIO_BITS downto 0);
-       gpio_t : out std_logic_vector(NUM_GPIO_BITS downto 0);
+       gpio_o : out std_logic_vector(NUM_GPIO_BITS-1 downto 0);
+       gpio_i : in  std_logic_vector(NUM_GPIO_BITS-1 downto 0);
+       gpio_t : out std_logic_vector(NUM_GPIO_BITS-1 downto 0);
 
 
        -- SPI flash chip
@@ -76,6 +76,9 @@ signal m_ack_i :  std_logic_vector(0 to slaves-1);
 
 begin
 
+irq_o(irq_o'high downto 3) <= (others=>'0'); -- temporary
+irq_o(0) <= '0';
+
 Inst_io_intercon: entity work.io_intercon PORT MAP(
         clk_i => clk_i,
         rst_i => rst_i,
@@ -96,6 +99,7 @@ Inst_io_intercon: entity work.io_intercon PORT MAP(
         m0_adr_o => m_adr_o(0),
         m0_dat_o => m_dat_o(0),
         m0_dat_i => m_dat_i(0),
+
         m1_cyc_o => m_cyc_o(1) ,
         m1_stb_o => m_stb_o(1),
         m1_we_o => m_we_o(1),
@@ -104,6 +108,7 @@ Inst_io_intercon: entity work.io_intercon PORT MAP(
         m1_adr_o => m_adr_o(1),
         m1_dat_o => m_dat_o(1),
         m1_dat_i => m_dat_i(1),
+
         m2_cyc_o => m_cyc_o(2) ,
         m2_stb_o => m_stb_o(2),
         m2_we_o => m_we_o(2),
@@ -112,6 +117,7 @@ Inst_io_intercon: entity work.io_intercon PORT MAP(
         m2_adr_o => m_adr_o(2),
         m2_dat_o => m_dat_o(2),
         m2_dat_i => m_dat_i(2),
+
         m3_cyc_o => m_cyc_o(3) ,
         m3_stb_o => m_stb_o(3),
         m3_we_o => m_we_o(3),
@@ -125,7 +131,8 @@ Inst_io_intercon: entity work.io_intercon PORT MAP(
 
 uart_0: entity work.zpuino_uart
 GENERIC MAP (
-  bits => UART_FIFO_DEPTH
+  bits => UART_FIFO_DEPTH,
+  extended => true
 )
 
 PORT MAP(
@@ -133,12 +140,12 @@ PORT MAP(
         wb_rst_i => rst_i,
         wb_dat_o =>  m_dat_i(0),
         wb_dat_i =>  m_dat_o(0),
-        wb_adr_i =>  m_adr_o(0)(2 downto 2),
+        wb_adr_i =>  m_adr_o(0)(3 downto 2),
         wb_we_i =>   m_we_o(0),
         wb_cyc_i =>  m_cyc_o(0),
         wb_stb_i =>  m_stb_o(0),
         wb_ack_o =>  m_ack_i(0),
-        wb_inta_o => open ,
+        wb_inta_o => irq_o(1) ,
         id => open,
         enabled => open,
         tx => uart0_txd,
@@ -148,7 +155,8 @@ PORT MAP(
 
 uart_1: entity work.zpuino_uart
 GENERIC MAP (
-  bits => UART_FIFO_DEPTH
+  bits => UART_FIFO_DEPTH,
+  extended => true
 )
 
 PORT MAP(
@@ -156,12 +164,12 @@ PORT MAP(
         wb_rst_i => rst_i,
         wb_dat_o =>  m_dat_i(2),
         wb_dat_i =>  m_dat_o(2),
-        wb_adr_i =>  m_adr_o(2)(2 downto 2),
+        wb_adr_i =>  m_adr_o(2)(3 downto 2),
         wb_we_i =>   m_we_o(2),
         wb_cyc_i =>  m_cyc_o(2),
         wb_stb_i =>  m_stb_o(2),
         wb_ack_o =>  m_ack_i(2),
-        wb_inta_o => open ,
+        wb_inta_o => irq_o(2) ,
         id => open,
         enabled => open,
         tx => uart1_txd,
@@ -190,6 +198,27 @@ PORT MAP(
         wb_cyc_in => m_cyc_o(1),
         wb_stb_in => m_stb_o(1),
         wb_ack_out =>m_ack_i(1)
+    );
+
+
+Inst_gpio: entity work.gpio
+GENERIC MAP (
+   wbs_adr_high => t_wbadr'high,
+   NUM_GPIO_BITS => gpio_o'length
+)
+
+PORT MAP(
+        leds =>gpio_o,
+        clk_i => clk_i,
+        rst_i => rst_i,
+        wbs_cyc_i => m_cyc_o(3),
+        wbs_stb_i => m_stb_o(3),
+        wbs_we_i => m_we_o(3),
+        wbs_sel_i => m_sel_o(3),
+        wbs_ack_o => m_ack_i(3),
+        wbs_adr_i => m_adr_o(3),
+        wbs_dat_i => m_dat_o(3),
+        wbs_dat_o => m_dat_i(3)
     );
 
 

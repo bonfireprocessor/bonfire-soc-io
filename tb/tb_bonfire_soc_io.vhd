@@ -52,9 +52,9 @@ ARCHITECTURE behavior OF tb_bonfire_soc_io IS
          uart0_rxd : IN  std_logic;
          uart1_txd : OUT  std_logic;
          uart1_rxd : IN  std_logic;
-         gpio_o : OUT  std_logic_vector(32 downto 0);
-         gpio_i : IN  std_logic_vector(32 downto 0);
-         gpio_t : OUT  std_logic_vector(32 downto 0);
+         gpio_o : OUT  std_logic_vector(31 downto 0);
+         gpio_i : IN  std_logic_vector(31 downto 0);
+         gpio_t : OUT  std_logic_vector(31 downto 0);
          flash_spi_cs : OUT  std_logic;
          flash_spi_clk : OUT  std_logic;
          flash_spi_mosi : OUT  std_logic;
@@ -94,7 +94,7 @@ ARCHITECTURE behavior OF tb_bonfire_soc_io IS
    --Inputs
    signal uart0_rxd : std_logic := '0';
    signal uart1_rxd : std_logic := '0';
-   signal gpio_i : std_logic_vector(32 downto 0) := (others => '0');
+   signal gpio_i : std_logic_vector(31 downto 0) := (others => '0');
    signal flash_spi_miso : std_logic := '0';
    signal clk_i : std_logic := '0';
    signal rst_i : std_logic := '0';
@@ -108,8 +108,8 @@ ARCHITECTURE behavior OF tb_bonfire_soc_io IS
     --Outputs
    signal uart0_txd : std_logic;
    signal uart1_txd : std_logic;
-   signal gpio_o : std_logic_vector(32 downto 0);
-   signal gpio_t : std_logic_vector(32 downto 0);
+   signal gpio_o : std_logic_vector(31 downto 0);
+   signal gpio_t : std_logic_vector(31 downto 0);
    signal flash_spi_cs : std_logic;
    signal flash_spi_clk : std_logic;
    signal flash_spi_mosi : std_logic;
@@ -131,6 +131,7 @@ ARCHITECTURE behavior OF tb_bonfire_soc_io IS
    constant UART_0_BASE : t_adr_s :=(others=>'0');
    constant FLASH_SPI_BASE : t_adr_s := UART_0_BASE+io_offset;
    constant UART_1_BASE : t_adr_s := FLASH_SPI_BASE+io_offset;
+   constant GPIO_BASE : t_adr_s := UART_1_BASE+io_offset;
 
    signal uart0_stop,uart1_stop : boolean;
 
@@ -203,6 +204,9 @@ BEGIN
     );
 
 
+
+
+
    clk_i <= not clk_i after clk_i_period/2 when TbSimEnded /= '1' else '0';
 
    flash_spi_miso <= flash_spi_mosi; -- loop back
@@ -214,12 +218,13 @@ BEGIN
 
        procedure wb_write(address : in t_adr_s; data : in std_logic_vector(wb_dat_i'range)) is
          begin
-            wb_adr_i <= std_logic_vector(address(wb_adr_i'range));
             wait until rising_edge(clk_i);
+            wb_adr_i <= std_logic_vector(address(wb_adr_i'range));
             wb_dat_i <= data;
             wb_we_i <= '1';
             wb_cyc_i <= '1';
             wb_stb_i <= '1';
+            wb_sel_i <="1111";
 
             wait  until rising_edge(clk_i) and wb_ack_o = '1' ;
             wb_stb_i <= '0';
@@ -230,12 +235,13 @@ BEGIN
        procedure wb_read(address : in t_adr_s;
                           data: out std_logic_vector(wb_dat_o'range) )  is
          begin
-            wb_adr_i <= std_logic_vector(address(wb_adr_i'range));
             wait until rising_edge(clk_i);
+            wb_adr_i <= std_logic_vector(address(wb_adr_i'range));
             wb_we_i <= '1';
             wb_cyc_i <= '1';
             wb_stb_i <= '1';
             wb_we_i <= '0';
+            wb_sel_i <="1111";
             wait until rising_edge(clk_i) and wb_ack_o = '1';
             data:= wb_dat_o;
             wb_stb_i <= '0';
@@ -291,28 +297,49 @@ BEGIN
       print(OUTPUT,"UART_0_BASE: " & hstr(std_logic_vector(UART_0_BASE)));
       print(OUTPUT,"FLASH_SPI_BASE: " & hstr(std_logic_vector(FLASH_SPI_BASE)));
       print(OUTPUT,"UART_1_BASE: " & hstr(std_logic_vector(UART_1_BASE)));
+      print(OUTPUT,"GPIO_BASE: " & hstr(std_logic_vector(GPIO_BASE)));
 
       test_spi_loopback;
 
-      -- UART 0 Test
+      -- UART 0/1 Test
       ctl:=(others=>'0');
       ctl(15 downto 0):=std_logic_vector(to_unsigned(51,16)); -- Divisor 51 for 115200 Baud
       ctl(16):='1';
       wb_write(UART_0_BASE+4,ctl);  -- Initalize UART
+      wb_write(UART_1_BASE+4,ctl);  -- Initalize UART
 
-      print(OUTPUT,"Send string: " & Teststr & " to UART0");
+      print(OUTPUT,"Send string: " & Teststr & " to UART0/1");
       -- UART Send Simulation
       for i in 1 to TestStr'length loop
          uart_tx(0,char_to_ascii_byte(TestStr(i)));
+         uart_tx(1,char_to_ascii_byte(TestStr(i)));
       end loop;
       uart_tx(0,X"1A"); -- eof
+      uart_tx(1,X"1A"); -- eof
 
-      wait until uart0_stop;
+      wait until uart0_stop and uart1_stop;
+
       print(OUTPUT,"UART0 Test captured bytes: " & str(total_count(0)) & " framing errors: " & str(framing_errors(0)));
       assert total_count(0)=TestStr'length+1 and framing_errors(0)=0 severity failure;
-      
+
+       print(OUTPUT,"UART1 Test captured bytes: " & str(total_count(1)) & " framing errors: " & str(framing_errors(1)));
+      assert total_count(1)=TestStr'length+1 and framing_errors(1)=0 severity failure;
+
+      -- GPIO Test
+
+      print(OUTPUT,"Testing GPIO Output");
+      ctl:=X"00000001";
+      for i in 1 to 32 loop
+        --print(OUTPUT,"Test GPIO with pattern " & hstr(ctl));
+        wb_write(GPIO_BASE,ctl);
+        assert gpio_o = ctl report "GPIO Output test failure" severity error;
+        ctl:= ctl(30 downto 0) & '0'; -- shift left
+      end loop;
+      print(OUTPUT,"OK");
+
+
       report "Test successfull";
-      
+
       -- insert stimulus here
       tbSimEnded <= '1';
       wait;

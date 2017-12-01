@@ -6,7 +6,7 @@ backend = ise
 simulators=ghdl isim
 
 [fileset rtl]
-files = io_intercon.vhd bonfire_soc_io.vhd
+files = gpio.vhd io_intercon.vhd bonfire_soc_io.vhd
 file_type=vhdlSource
 
 
