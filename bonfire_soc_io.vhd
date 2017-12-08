@@ -76,8 +76,8 @@ signal m_ack_i :  std_logic_vector(0 to slaves-1);
 
 begin
 
-irq_o(irq_o'high downto 3) <= (others=>'0'); -- temporary
-irq_o(0) <= '0';
+irq_o(irq_o'high-2 downto 0) <= (others=>'0'); -- temporary
+
 
 Inst_io_intercon: entity work.io_intercon PORT MAP(
         clk_i => clk_i,
@@ -145,7 +145,7 @@ PORT MAP(
         wb_cyc_i =>  m_cyc_o(0),
         wb_stb_i =>  m_stb_o(0),
         wb_ack_o =>  m_ack_i(0),
-        wb_inta_o => irq_o(1) ,
+        wb_inta_o => irq_o(irq_o'high) ,
         id => open,
         enabled => open,
         tx => uart0_txd,
@@ -169,7 +169,7 @@ PORT MAP(
         wb_cyc_i =>  m_cyc_o(2),
         wb_stb_i =>  m_stb_o(2),
         wb_ack_o =>  m_ack_i(2),
-        wb_inta_o => irq_o(2) ,
+        wb_inta_o => irq_o(irq_o'high-1) ,
         id => open,
         enabled => open,
         tx => uart1_txd,
