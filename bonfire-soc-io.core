@@ -1,7 +1,7 @@
 CAPI=1
 [main]
 name = ::bonfire-soc-io:0
-depend = ::bonfire-util:0 ::zpuino-uart:0 ::bonfire-spiflash:0
+depend = ::bonfire-util:0 ::zpuino-uart:0 ::bonfire-spiflash:0 ::bonfire-gpio:0
 backend = ise
 simulators=ghdl isim
 

@@ -76,7 +76,7 @@ signal m_ack_i :  std_logic_vector(0 to slaves-1);
 
 begin
 
-irq_o(irq_o'high-2 downto 0) <= (others=>'0'); -- temporary
+irq_o(irq_o'high-6 downto 0) <= (others=>'0'); -- temporary
 
 
 Inst_io_intercon: entity work.io_intercon PORT MAP(
@@ -201,24 +201,32 @@ PORT MAP(
     );
 
 
-Inst_gpio: entity work.gpio
+Inst_gpio: entity work.bonfire_gpio
 GENERIC MAP (
-   wbs_adr_high => t_wbadr'high,
+   maxIObit => t_wbadr'high,
    NUM_GPIO_BITS => gpio_o'length
 )
 
 PORT MAP(
-        leds =>gpio_o,
-        clk_i => clk_i,
-        rst_i => rst_i,
-        wbs_cyc_i => m_cyc_o(3),
-        wbs_stb_i => m_stb_o(3),
-        wbs_we_i => m_we_o(3),
-        wbs_sel_i => m_sel_o(3),
-        wbs_ack_o => m_ack_i(3),
-        wbs_adr_i => m_adr_o(3),
-        wbs_dat_i => m_dat_o(3),
-        wbs_dat_o => m_dat_i(3)
+        gpio_o =>gpio_o,
+        gpio_i =>gpio_i,
+        gpio_t =>gpio_t,
+        
+        wb_clk_i => clk_i,
+        wb_rst_i => rst_i,
+        wb_cyc_i => m_cyc_o(3),
+        wb_stb_i => m_stb_o(3),
+        wb_we_i => m_we_o(3),
+      
+        wb_ack_o => m_ack_i(3),
+        wb_adr_i => m_adr_o(3),
+        wb_dat_i => m_dat_o(3),
+        wb_dat_o => m_dat_i(3),
+        
+        rise_irq_o => irq_o(irq_o'high-2),
+		  fall_irq_o => irq_o(irq_o'high-3),
+		  high_irq_o => irq_o(irq_o'high-4),
+		  low_irq_o => irq_o(irq_o'high-5)
     );
 
 
