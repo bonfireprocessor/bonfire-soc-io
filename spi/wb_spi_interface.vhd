@@ -5,10 +5,9 @@
 -- Create Date:    17:30:47 02/18/2017
 -- Design Name:
 -- Module Name:    wb_spi_interface - Behavioral
--- Project Name:
--- Target Devices:
--- Tool versions:
--- Description:
+-- The Bonfire Processor Project, (c) 2016,2017 Thomas Hornschuh
+-- Simple SPI Interface
+
 
 -- registers:
 -- base+0   -- chip select control; bit 0 is slave_cs
@@ -16,13 +15,9 @@
 -- base+8   -- transmitter: write a byte here, starts SPI bus transaction
 -- base+0x0C   -- receiver: last byte received (updated on each transation)
 -- base+0x10   -- clock divider: SPI CLK is clk_i/2*(1+n) ie for 128MHz clock, divisor 0 is 64MHz, 1 is 32MHz, 3 is 16MHz etc
---
--- Dependencies:
---
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
---
+
+
+-- License: See LICENSE or LICENSE.txt File in git project root. 
 ----------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;

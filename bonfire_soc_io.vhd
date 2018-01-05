@@ -1,5 +1,15 @@
+----------------------------------------------------------------------------------
+
+-- Module Name:    bonfire_soc_io - Behavioral
+
+-- The Bonfire Processor Project, (c) 2016,2017 Thomas Hornschuh
+
+--  SOC IO Block with Wishbone interface
+--  Currently supports: 2* UART, 1* GPIO, 1* SPI Flash 
 
 
+-- License: See LICENSE or LICENSE.txt File in git project root. 
+----------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
 
