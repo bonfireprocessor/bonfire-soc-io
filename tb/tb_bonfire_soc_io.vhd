@@ -4,26 +4,18 @@
 --
 -- Create Date:   21:14:18 11/06/2017
 -- Design Name:
--- Module Name:   /home/thomas/fusesoc_projects/bonfire/bonfire-soc-io/tb/tb_bonfire_soc_io.vhd
--- Project Name:  bonfire-soc-io_0
--- Target Device:
--- Tool versions:
--- Description:
---
--- VHDL Test Bench Created by ISE for module: bonfire_soc_io
---
--- Dependencies:
---
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
---
--- Notes:
--- This testbench has been automatically generated using types std_logic and
--- std_logic_vector for the ports of the unit under test.  Xilinx recommends
--- that these types always be used for the top-level I/O of a design in order
--- to guarantee that the testbench will bind correctly to the post-implementation
--- simulation model.
+-- Module Name:   tb_bonfire_soc_io
+
+-- The Bonfire Processor Project, (c) 2016,2017 Thomas Hornschuh
+
+--  Test Bench for bonfire_soc_io
+--  This test bench does not toroughly test the enclosed I/O cores. 
+--  It is more intended to check that all modules are wired correctly and can be
+--  addressed. Unit testing on the I/O cores should be done with their test benches
+
+
+
+-- License: See LICENSE or LICENSE.txt File in git project root. 
 --------------------------------------------------------------------------------
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
