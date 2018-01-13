@@ -328,9 +328,12 @@ BEGIN
       -- GPIO Test
 
       print(OUTPUT,"Testing GPIO Output");
-      ctl:=X"00000001";
+      
       wb_write(GPIO_BASE+8,X"FFFFFFFF"); -- Output Enable
-      assert gpio_t = X"00000000" report "GPIO Test, Output  enable fail" severity error;
+      wait for clk_i_period*2;
+      assert gpio_t = X"00000000" report "GPIO Test, Output enable fail: " & str(gpio_t) severity error;
+      
+      ctl:=X"00000001";
       for i in 1 to 32 loop
         print(OUTPUT,"Test GPIO with pattern " & str(ctl));
         wb_write(GPIO_BASE+12,ctl);
