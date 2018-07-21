@@ -67,9 +67,9 @@ architecture rtl of bonfire_soc_io is
 
 constant slaves : natural := 4;
 
-subtype t_wbdat is  std_logic_vector(wb_dat_i'range);
+subtype t_wbdat is  std_logic_vector(wb_dat_i'high downto wb_dat_i'low);
 subtype t_wbadr is  std_logic_vector(15 downto 2);
-subtype t_wbsel is  std_logic_vector(wb_sel_i'range);
+subtype t_wbsel is  std_logic_vector(wb_sel_i'high downto wb_sel_i'low);
 
 type t_wbdat_a is array(natural range <>) of t_wbdat;
 type t_wbadr_a is array(natural range <>) of t_wbadr;

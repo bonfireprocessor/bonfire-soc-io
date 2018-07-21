@@ -1,6 +1,7 @@
 CAPI=1
 [main]
 name = ::bonfire-spiflash:0
+depend = ::bonfire-util:0
 
 simulators= ghdl isim
 

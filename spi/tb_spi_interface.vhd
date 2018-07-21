@@ -30,6 +30,8 @@ USE ieee.std_logic_1164.ALL;
 
 USE ieee.numeric_std.ALL;
 
+use work.txt_util.all;
+
 ENTITY tb_spi_interface IS
 END tb_spi_interface;
 
@@ -138,17 +140,26 @@ BEGIN
 
       wait for clk_i_period*10;
 
+      print("Setting up Clock Divider");
       wb_write("100",X"01"); -- Clock Divider
+      wb_read("100",d);
+      print("Check Clock Divider: " & hstr(d));
+      assert d = X"01"
+        report "Clock divider set failure"
+        severity failure;
+
       wb_write("000",X"FE"); -- Chip Select
       -- send 10 bytes
       for i in 0 to 255 loop
         t:=std_logic_vector(to_unsigned(i,t'length));
         wb_write("010",t);
         wb_read("011",d);
-        if d /= t then
-          report "Failure";
-          wait;
-        end if;
+        print("Testing pattern: " & hstr(t) & " result: " & hstr(d));
+        assert d = t
+          report "Failure at pattern: " & hstr(t)
+          severity failure;
+
+
 
       end loop;
       report "Success";
