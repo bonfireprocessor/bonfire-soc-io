@@ -1,26 +1,32 @@
-CAPI=1
-[main]
-name = ::bonfire-soc-io:0
-depend = ::bonfire-util:0 ::zpuino-uart:0 ::bonfire-spiflash:0 ::bonfire-gpio:0
-backend = ise
-simulators=ghdl isim
-
-[fileset rtl]
-files = gpio.vhd io_intercon.vhd bonfire_soc_io.vhd
-file_type=vhdlSource
-
-
-[fileset sim]
-files=tb/tb_bonfire_soc_io.vhd
-file_type=vhdlSource
-scope = private
-
-[ise]
-family = spartan6
-device = xc6slx9
-package = tqg144
-speed = -2
-top_module = bonfire_soc_io
-
-[simulator]
-toplevel = tb_bonfire_soc_io
+CAPI=2:
+filesets:
+  rtl:
+    depend:
+    - ::bonfire-util:0
+    - ::zpuino-uart:0
+    - ::bonfire-spiflash:0
+    - ::bonfire-gpio:0
+    file_type: vhdlSource
+    files:
+    - gpio.vhd
+    - io_intercon.vhd
+    - bonfire_soc_io.vhd
+  sim:
+    file_type: vhdlSource
+    files:
+    - tb/tb_bonfire_soc_io.vhd
+name: ::bonfire-soc-io:0
+targets:
+  default:
+    filesets:
+    - rtl
+  sim:
+    default_tool: ghdl
+    filesets:
+    - rtl
+    - sim
+    toplevel: tb_bonfire_soc_io
+    tools:
+      ghdl:
+        analyze_options: 
+        - "--ieee=synopsys"  

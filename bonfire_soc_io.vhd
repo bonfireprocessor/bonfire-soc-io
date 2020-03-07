@@ -5,10 +5,10 @@
 -- The Bonfire Processor Project, (c) 2016,2017 Thomas Hornschuh
 
 --  SOC IO Block with Wishbone interface
---  Currently supports: 2* UART, 1* GPIO, 1* SPI Flash 
+--  Currently supports: 2* UART, 1* GPIO, 1* SPI Flash
 
 
--- License: See LICENSE or LICENSE.txt File in git project root. 
+-- License: See LICENSE or LICENSE.txt File in git project root.
 ----------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
@@ -173,7 +173,7 @@ end generate;
 
 g_no_uart_0: if not ENABLE_UART0 generate
    m_ack_i(0) <= m_cyc_o(0) and  m_stb_o(0);
-   irq_o(irq_o'high) <= '0'; 
+   irq_o(irq_o'high) <= '0';
 end generate;
 
 
@@ -207,7 +207,7 @@ end generate;
 
 g_no_uart_1: if not ENABLE_UART1 generate
    m_ack_i(2) <= m_cyc_o(2) and  m_stb_o(2);
-   irq_o(irq_o'high-1) <= '0'; 
+   irq_o(irq_o'high-1) <= '0';
 end generate;
 
 g_spi: if ENABLE_SPI generate
@@ -253,18 +253,18 @@ g_gpio: if ENABLE_GPIO generate
             gpio_o =>gpio_o,
             gpio_i =>gpio_i,
             gpio_t =>gpio_t,
-            
+
             wb_clk_i => clk_i,
             wb_rst_i => rst_i,
             wb_cyc_i => m_cyc_o(3),
             wb_stb_i => m_stb_o(3),
             wb_we_i => m_we_o(3),
-        
+
             wb_ack_o => m_ack_i(3),
             wb_adr_i => m_adr_o(3),
             wb_dat_i => m_dat_o(3),
             wb_dat_o => m_dat_i(3),
-            
+
             rise_irq_o => irq_o(irq_o'high-2),
             fall_irq_o => irq_o(irq_o'high-3),
             high_irq_o => irq_o(irq_o'high-4),
@@ -273,9 +273,9 @@ g_gpio: if ENABLE_GPIO generate
 
 end generate;
 
-g_no_gpio: if not ENABLE_UART1 generate
+g_no_gpio: if not ENABLE_GPIO generate
    m_ack_i(3) <= m_cyc_o(3) and  m_stb_o(3);
-   irq_o(irq_o'high-2 downto irq_o'high-5) <= (others =>'0'); 
+   irq_o(irq_o'high-2 downto irq_o'high-5) <= (others =>'0');
 end generate;
 
 end architecture;
