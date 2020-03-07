@@ -1,4 +1,5 @@
 CAPI=2:
+name: ::bonfire-soc-io:0
 filesets:
   rtl:
     depend:
@@ -15,7 +16,7 @@ filesets:
     file_type: vhdlSource
     files:
     - tb/tb_bonfire_soc_io.vhd
-name: ::bonfire-soc-io:0
+
 targets:
   default:
     filesets:
@@ -26,7 +27,4 @@ targets:
     - rtl
     - sim
     toplevel: tb_bonfire_soc_io
-    tools:
-      ghdl:
-        analyze_options: 
-        - "--ieee=synopsys"  
+    

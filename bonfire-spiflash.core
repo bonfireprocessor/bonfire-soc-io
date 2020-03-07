@@ -1,23 +1,26 @@
-CAPI=1
-[main]
-name = ::bonfire-spiflash:0
-depend = ::bonfire-util:0
+CAPI=2:
+name: ::bonfire-spiflash:0
+filesets:
+  rtl:
+    depend:
+    - ::bonfire-util:0
+    file_type: vhdlSource
+    files:
+    - spi/wb_spi_interface.vhd
+    - spi/spimaster.vhd
+  sim:
+    file_type: vhdlSource
+    files:
+    - spi/tb_spi_interface.vhd
 
-simulators= ghdl isim
-
-[fileset rtl]
-files =  spi/wb_spi_interface.vhd spi/spimaster.vhd
-file_type=vhdlSource
-
-
-[fileset sim]
-files=spi/tb_spi_interface.vhd
-file_type=vhdlSource
-usage=sim
-scope = private
-
-
-[simulator]
-toplevel = tb_spi_interface
-
-
+targets:
+  default:
+    filesets:
+    - rtl
+  sim:
+    default_tool: ghdl
+    filesets:
+    - rtl
+    - sim
+    toplevel: tb_spi_interface
+ 
