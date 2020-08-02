@@ -27,4 +27,10 @@ targets:
     - rtl
     - sim
     toplevel: tb_bonfire_soc_io
+    tools:
+        ghdl:
+          analyze_options: [--ieee=synopsys, -frelaxed-rules, --std=08 ]
+          run_options: [ --ieee-asserts=disable, --max-stack-alloc=0, --stop-time=5000000ns ] #,  , --wave=soc.ghw ]
+        xsim:
+          xelab_options: [ "--debug typical" ]  
     
