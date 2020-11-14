@@ -39,18 +39,30 @@ ARCHITECTURE behavior OF tb_bonfire_soc_io IS
     -- Component Declaration for the Unit Under Test (UUT)
 
     COMPONENT bonfire_soc_io
+    generic (
+       CLK_FREQUENCY : natural := (96 * 1000000);
+       NUM_GPIO_BITS : natural := 32;
+       ADR_HIGH : natural := 25;
+       UART_FIFO_DEPTH : natural := 6; -- log2 of  UART fifo depth
+       ENABLE_UART0 : boolean := true;
+       ENABLE_UART1 : boolean := true;
+       ENABLE_SPI : boolean := true;
+       NUM_SPI : natural := 1;
+       ENABLE_GPIO : boolean := true
+    );
+
     PORT(
          uart0_txd : OUT  std_logic;
          uart0_rxd : IN  std_logic;
          uart1_txd : OUT  std_logic;
          uart1_rxd : IN  std_logic;
-         gpio_o : OUT  std_logic_vector(31 downto 0);
-         gpio_i : IN  std_logic_vector(31 downto 0);
-         gpio_t : OUT  std_logic_vector(31 downto 0);
-         flash_spi_cs : OUT  std_logic;
-         flash_spi_clk : OUT  std_logic;
-         flash_spi_mosi : OUT  std_logic;
-         flash_spi_miso : IN  std_logic;
+         gpio_o : out std_logic_vector(NUM_GPIO_BITS-1 downto 0);
+         gpio_i : in  std_logic_vector(NUM_GPIO_BITS-1 downto 0);
+         gpio_t : out std_logic_vector(NUM_GPIO_BITS-1 downto 0);  
+         spi_cs        : out   std_logic_vector(NUM_SPI-1 downto 0);
+         spi_clk       : out   std_logic_vector(NUM_SPI-1 downto 0);
+         spi_mosi      : out   std_logic_vector(NUM_SPI-1 downto 0);
+         spi_miso      : in    std_logic_vector(NUM_SPI-1 downto 0);
          irq_o : OUT  std_logic_vector(7 downto 0);
          clk_i : IN  std_logic;
          rst_i : IN  std_logic;
@@ -59,7 +71,7 @@ ARCHITECTURE behavior OF tb_bonfire_soc_io IS
          wb_we_i : IN  std_logic;
          wb_sel_i : IN  std_logic_vector(3 downto 0);
          wb_ack_o : OUT  std_logic;
-         wb_adr_i : IN  std_logic_vector(25 downto 2);
+         wb_adr_i : IN  std_logic_vector(ADR_HIGH downto 2);
          wb_dat_i : IN  std_logic_vector(31 downto 0);
          wb_dat_o : OUT  std_logic_vector(31 downto 0)
         );
@@ -140,7 +152,9 @@ ARCHITECTURE behavior OF tb_bonfire_soc_io IS
 BEGIN
 
     -- Instantiate the Unit Under Test (UUT)
-   uut: bonfire_soc_io PORT MAP (
+   uut: bonfire_soc_io 
+   
+   PORT MAP (
           uart0_txd => uart0_txd,
           uart0_rxd => uart0_rxd,
           uart1_txd => uart1_txd,
@@ -148,10 +162,10 @@ BEGIN
           gpio_o => gpio_o,
           gpio_i => gpio_i,
           gpio_t => gpio_t,
-          flash_spi_cs => flash_spi_cs,
-          flash_spi_clk => flash_spi_clk,
-          flash_spi_mosi => flash_spi_mosi,
-          flash_spi_miso => flash_spi_miso,
+          spi_cs(0) => flash_spi_cs,
+          spi_clk(0) => flash_spi_clk,
+          spi_mosi(0) => flash_spi_mosi,
+          spi_miso(0) => flash_spi_miso,
           irq_o => irq_o,
           clk_i => clk_i,
           rst_i => rst_i,

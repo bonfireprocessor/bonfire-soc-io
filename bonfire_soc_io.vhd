@@ -22,6 +22,7 @@ generic (
    ENABLE_UART0 : boolean := true;
    ENABLE_UART1 : boolean := true;
    ENABLE_SPI : boolean := true;
+   NUM_SPI : natural := 1;
    ENABLE_GPIO : boolean := true
 );
 Port(
@@ -41,11 +42,11 @@ Port(
        gpio_t : out std_logic_vector(NUM_GPIO_BITS-1 downto 0);
 
 
-       -- SPI flash chip
-       flash_spi_cs        : out   std_logic;
-       flash_spi_clk       : out   std_logic;
-       flash_spi_mosi      : out   std_logic;
-       flash_spi_miso      : in    std_logic;
+       -- SPI ports
+       spi_cs        : out   std_logic_vector(NUM_SPI-1 downto 0);
+       spi_clk       : out   std_logic_vector(NUM_SPI-1 downto 0);
+       spi_mosi      : out   std_logic_vector(NUM_SPI-1 downto 0);
+       spi_miso      : in    std_logic_vector(NUM_SPI-1 downto 0);
 
 
        irq_o: out std_logic_vector(7 downto 0);
@@ -87,6 +88,46 @@ signal m_dat_i :  t_wbdat_a(0 to slaves-1);
 signal m_adr_o :  t_wbadr_a(0 to slaves-1);
 signal m_sel_o :  t_wbsel_a(0 to slaves-1);
 signal m_ack_i :  std_logic_vector(0 to slaves-1);
+
+
+component bonfire_spi
+    generic (
+
+       CPOL : std_logic := '0';  -- SPI mode selection (mode 0 default)
+       CPHA : std_logic := '0';  -- CPOL = clock polarity, CPHA = clock phase.
+       SPI_2X_CLK_DIV : natural := 2;
+
+
+       WB_DATA_WIDTH : natural :=32;
+       ADR_LOW  : natural :=2;
+       NUM_PORTS : natural := 1
+    );
+    port (
+          spi_clk_i : in std_logic;
+
+
+          -- SPI Port:
+          slave_cs_o         : out std_logic_vector(NUM_PORTS-1 downto 0);
+          slave_clk_o        : out std_logic_vector(NUM_PORTS-1 downto 0);
+          slave_mosi_o       : out std_logic_vector(NUM_PORTS-1 downto 0);
+          slave_miso_i       : in  std_logic_vector(NUM_PORTS-1 downto 0);
+
+          -- Interrupt signal:
+          irq : out std_logic;
+
+          -- Wishbone ports:
+          wb_clk_i   : in std_logic;
+          wb_rst_i   : in std_logic;
+          wb_adr_in  : in  std_logic_vector(ADR_LOW+7 downto ADR_LOW);
+          wb_dat_in  : in  std_logic_vector(WB_DATA_WIDTH-1 downto 0);
+          wb_dat_out : out std_logic_vector(WB_DATA_WIDTH-1 downto 0);
+          wb_we_in   : in  std_logic;
+          wb_cyc_in  : in  std_logic;
+          wb_stb_in  : in  std_logic;
+          wb_ack_out : out std_logic
+    );
+end component bonfire_spi;
+
 
 begin
 
@@ -212,21 +253,21 @@ end generate;
 
 g_spi: if ENABLE_SPI generate
 
-    spi_flash: entity  work.wb_spi_interface
-    GENERIC MAP (
-    CLK_FREQUENCY => CLK_FREQUENCY,
-    WB_DATA_WIDTH => 32,
-    ADR_HIGH => t_wbadr'high
+    spi_flash: bonfire_spi
+    generic map (
+      NUM_PORTS => 1  
     )
     PORT MAP(
-            clk_i => clk_i,
-            reset_i => rst_i,
-            slave_cs_o => flash_spi_cs,
-            slave_clk_o => flash_spi_clk,
-            slave_mosi_o => flash_spi_mosi,
-            slave_miso_i => flash_spi_miso,
+            wb_clk_i => clk_i,
+            wb_rst_i => rst_i,
+            spi_clk_i => clk_i,
+
+            slave_cs_o => spi_cs,
+            slave_clk_o => spi_clk,
+            slave_mosi_o => spi_mosi,
+            slave_miso_i => spi_miso,
             irq => open,
-            wb_adr_in => m_adr_o(1),
+            wb_adr_in => m_adr_o(1)(9 downto 2),
             wb_dat_in => m_dat_o(1),
             wb_dat_out => m_dat_i(1),
             wb_we_in =>  m_we_o(1),
