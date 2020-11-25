@@ -255,7 +255,7 @@ g_spi: if ENABLE_SPI generate
 
     spi_flash: bonfire_spi
     generic map (
-      NUM_PORTS => 1  
+      NUM_PORTS => NUM_SPI
     )
     PORT MAP(
             wb_clk_i => clk_i,
