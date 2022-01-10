@@ -32,6 +32,9 @@ use work.txt_util.all;
 
 
 ENTITY tb_bonfire_soc_io IS
+  generic (
+    SKIP_UART_TEST : boolean := true
+  );
 END tb_bonfire_soc_io;
 
 ARCHITECTURE behavior OF tb_bonfire_soc_io IS
@@ -48,7 +51,18 @@ ARCHITECTURE behavior OF tb_bonfire_soc_io IS
        ENABLE_UART1 : boolean := true;
        ENABLE_SPI : boolean := true;
        NUM_SPI : natural := 1;
-       ENABLE_GPIO : boolean := true
+       ENABLE_GPIO : boolean := true;
+
+       ENABLE_SIRC : boolean := false;
+       SIRC_IRQS : natural := 8;
+       UART0_IRC_NUM : natural := 1;
+       UART1_IRC_NUM : natural := 2;
+       GPIO_RISE_IRC_NUM: natural :=3;
+       GPIO_FALL_IRC_NUM: natural :=4;
+       GPIO_HIGH_IRC_NUM: natural :=5;
+       GPIO_LOW_IRC_NUM: natural :=6;
+    
+       IRQ_LEGACY_MODE : boolean := true -- Use old IRQ mechanism in parallel
     );
 
     PORT(
@@ -64,6 +78,8 @@ ARCHITECTURE behavior OF tb_bonfire_soc_io IS
          spi_mosi      : out   std_logic_vector(NUM_SPI-1 downto 0);
          spi_miso      : in    std_logic_vector(NUM_SPI-1 downto 0);
          irq_o : OUT  std_logic_vector(7 downto 0);
+         sirc_irq_o : out std_logic;  
+
          clk_i : IN  std_logic;
          rst_i : IN  std_logic;
          wb_cyc_i : IN  std_logic;
@@ -120,6 +136,7 @@ ARCHITECTURE behavior OF tb_bonfire_soc_io IS
    signal irq_o : std_logic_vector(7 downto 0);
    signal wb_ack_o : std_logic;
    signal wb_dat_o : std_logic_vector(31 downto 0);
+   signal sirq_request : std_logic;
 
    -- Clock period definitions
 
@@ -136,6 +153,7 @@ ARCHITECTURE behavior OF tb_bonfire_soc_io IS
    constant FLASH_SPI_BASE : t_adr_s := UART_0_BASE+io_offset;
    constant UART_1_BASE : t_adr_s := FLASH_SPI_BASE+io_offset;
    constant GPIO_BASE : t_adr_s := UART_1_BASE+io_offset;
+   constant SIRC_BASE : t_adr_s := GPIO_BASE+io_offset;
 
    signal uart0_stop,uart1_stop : boolean;
 
@@ -153,6 +171,9 @@ BEGIN
 
     -- Instantiate the Unit Under Test (UUT)
    uut: bonfire_soc_io 
+   GENERIC MAP (
+    ENABLE_SIRC => TRUE
+   )
    
    PORT MAP (
           uart0_txd => uart0_txd,
@@ -167,6 +188,7 @@ BEGIN
           spi_mosi(0) => flash_spi_mosi,
           spi_miso(0) => flash_spi_miso,
           irq_o => irq_o,
+          sirc_irq_o => sirq_request,
           clk_i => clk_i,
           rst_i => rst_i,
           wb_cyc_i => wb_cyc_i,
@@ -235,6 +257,7 @@ BEGIN
             wait  until rising_edge(clk_i) and wb_ack_o = '1' ;
             wb_stb_i <= '0';
             wb_cyc_i <= '0';
+            wb_we_i <=  '0';
 
         end procedure;
 
@@ -294,6 +317,58 @@ BEGIN
         end;
 
 
+        procedure check_sirq_claim(v: std_logic_vector(wb_dat_i'range)) is
+        variable d : std_logic_vector(wb_dat_i'range);  
+        begin
+          wb_read(SIRC_BASE+8,d);
+          print(OUTPUT,"Interrupt claim register:" & hstr(d));
+          assert d=v report "Invalid value for interrupt claim register" severity error;          
+        end procedure;  
+
+        procedure sirc_test is
+        constant irq3_mask : std_logic_vector(wb_dat_i'range) := (3=>'1',others=>'0');  
+        begin
+          print(OUTPUT,"Testing SIRC IE Register");
+          wb_read(SIRC_BASE+4,d);         
+          assert d= 32b"0" report "IE register reset value invalid" severity error ; 
+          assert sirq_request='0' report "sirq_request is not 0 initially" severity error;
+          check_sirq_claim(32ub"0");
+          wb_write(SIRC_BASE+4,X"FFFFFFFF");
+          wb_read(SIRC_BASE+4,d);
+          print(OUTPUT,"IE Register read: " & str(d));
+          assert d=32ub"111111110" report "Invalid read value for IE register:" & str(d) severity error;
+         
+         
+          wb_write(SIRC_BASE+4,irq3_mask); -- Enable IRQ 3 (GPIO_RISE)
+          wb_write(GPIO_BASE+8,32ub"0"); -- Disable all GPIO Outputs
+          wb_write(GPIO_BASE+4,32ub"1"); -- Enable GPIO input 0
+          wb_write(GPIO_BASE+X"18",32ub"1"); -- Enable GPIO Rise Interrupt
+          assert sirq_request='0' report "sirq_request is not 0 initially" severity error;
+          wb_read(SIRC_BASE,d);
+          assert d=32ub"0" report "IP register is not cleared" severity error;
+          --- Trigger interrupt
+          gpio_i(0) <= '1';
+          wait until sirq_request = '1';
+          wb_read(SIRC_BASE,d);
+          assert d=irq3_mask report "IP flag not set correctly" & str(d) severity error;
+          check_sirq_claim(32ux"3");
+         
+          -- Clear interrupt source
+          wb_write(GPIO_BASE+X"18",32ub"0"); -- Disable GPIO Rise Interrupt
+          wb_write(GPIO_BASE+X"1C",32ub"1"); -- Clear IRQ Pending flag
+          wait for 2*clk_i_period;
+          assert sirq_request = '1' report "sirq_request should still be asserted" severity error;
+
+          wb_write(SIRC_BASE+8,32ux"3"); -- confirm IRQ
+          wait until rising_edge(clk_i);  
+          assert sirq_request = '0' report "sirq_request not deasserted" severity error;
+          check_sirq_claim(32ub"0");
+
+          print(OUTPUT,"Testing SIRC OK");
+          
+        end procedure;   
+
+
         variable ctl : std_logic_vector(31 downto 0);
         constant Teststr : string := "The quick brown fox jumps over the lazy dog";
 
@@ -304,32 +379,42 @@ BEGIN
       print(OUTPUT,"FLASH_SPI_BASE: " & hstr(std_logic_vector(FLASH_SPI_BASE)));
       print(OUTPUT,"UART_1_BASE: " & hstr(std_logic_vector(UART_1_BASE)));
       print(OUTPUT,"GPIO_BASE: " & hstr(std_logic_vector(GPIO_BASE)));
+      print(OUTPUT,"SIRC_BASE: " & hstr(std_logic_vector(SIRC_BASE)));
 
       test_spi_loopback;
 
-      -- UART 0/1 Test
-      ctl:=(others=>'0');
-      ctl(15 downto 0):=std_logic_vector(to_unsigned(51,16)); -- Divisor 51 for 115200 Baud
-      ctl(16):='1';
-      wb_write(UART_0_BASE+4,ctl);  -- Initalize UART
-      wb_write(UART_1_BASE+4,ctl);  -- Initalize UART
+      if not SKIP_UART_TEST then 
 
-      print(OUTPUT,"Send string: " & Teststr & " to UART0/1");
-      -- UART Send Simulation
-      for i in 1 to TestStr'length loop
-         uart_tx(0,char_to_ascii_byte(TestStr(i)));
-         uart_tx(1,char_to_ascii_byte(TestStr(i)));
-      end loop;
-      uart_tx(0,X"1A"); -- eof
-      uart_tx(1,X"1A"); -- eof
+        -- UART 0/1 Test
+        ctl:=(others=>'0');
+        ctl(15 downto 0):=std_logic_vector(to_unsigned(51,16)); -- Divisor 51 for 115200 Baud
+        ctl(16):='1';
+        wb_write(UART_0_BASE+4,ctl);  -- Initalize UART
+        wb_write(UART_1_BASE+4,ctl);  -- Initalize UART
 
-      wait until uart0_stop and uart1_stop;
+        print(OUTPUT,"Send string: " & Teststr & " to UART0/1");
+        -- UART Send Simulation
+        for i in 1 to TestStr'length loop
+           uart_tx(0,char_to_ascii_byte(TestStr(i)));
+           uart_tx(1,char_to_ascii_byte(TestStr(i)));
+        end loop;
+        uart_tx(0,X"1A"); -- eof
+        uart_tx(1,X"1A"); -- eof
 
-      print(OUTPUT,"UART0 Test captured bytes: " & str(total_count(0)) & " framing errors: " & str(framing_errors(0)));
-      assert total_count(0)=TestStr'length+1 and framing_errors(0)=0 severity failure;
+        wait until uart0_stop and uart1_stop;
 
-       print(OUTPUT,"UART1 Test captured bytes: " & str(total_count(1)) & " framing errors: " & str(framing_errors(1)));
-      assert total_count(1)=TestStr'length+1 and framing_errors(1)=0 severity failure;
+       
+
+        print(OUTPUT,"UART0 Test captured bytes: " & str(total_count(0)) & " framing errors: " & str(framing_errors(0)));
+        assert total_count(0)=TestStr'length+1 and framing_errors(0)=0 severity failure;
+
+         print(OUTPUT,"UART1 Test captured bytes: " & str(total_count(1)) & " framing errors: " & str(framing_errors(1)));
+        assert total_count(1)=TestStr'length+1 and framing_errors(1)=0 severity failure;
+
+    else 
+      print(OUTPUT,"Warning: UART Test skipped");
+
+    end if; 
 
       -- GPIO Test
 
@@ -349,8 +434,12 @@ BEGIN
       end loop;
       print(OUTPUT,"OK");
 
+      --SIRC Test
+      sirc_test;
+
 
       report "Test successfull";
+      wait for 10*clk_i_period;
 
       -- insert stimulus here
       tbSimEnded <= '1';
