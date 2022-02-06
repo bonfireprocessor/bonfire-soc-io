@@ -33,7 +33,7 @@ use work.txt_util.all;
 
 ENTITY tb_bonfire_soc_io IS
   generic (
-    SKIP_UART_TEST : boolean := true
+    SKIP_UART_TEST : boolean := false
   );
 END tb_bonfire_soc_io;
 
@@ -61,6 +61,7 @@ ARCHITECTURE behavior OF tb_bonfire_soc_io IS
        GPIO_FALL_IRC_NUM: natural :=4;
        GPIO_HIGH_IRC_NUM: natural :=5;
        GPIO_LOW_IRC_NUM: natural :=6;
+       ADITIONAL_SIRC_IRQ_LOW : natural := 7;
     
        IRQ_LEGACY_MODE : boolean := true -- Use old IRQ mechanism in parallel
     );
@@ -322,7 +323,7 @@ BEGIN
         begin
           wb_read(SIRC_BASE+8,d);
           print(OUTPUT,"Interrupt claim register:" & hstr(d));
-          assert d=v report "Invalid value for interrupt claim register" severity error;          
+          assert d=v report "Invalid value for interrupt claim register" severity failure;          
         end procedure;  
 
         procedure sirc_test is
@@ -330,38 +331,38 @@ BEGIN
         begin
           print(OUTPUT,"Testing SIRC IE Register");
           wb_read(SIRC_BASE+4,d);         
-          assert d= 32b"0" report "IE register reset value invalid" severity error ; 
-          assert sirq_request='0' report "sirq_request is not 0 initially" severity error;
+          assert d= 32b"0" report "IE register reset value invalid" severity failure ; 
+          assert sirq_request='0' report "sirq_request is not 0 initially" severity failure;
           check_sirq_claim(32ub"0");
           wb_write(SIRC_BASE+4,X"FFFFFFFF");
           wb_read(SIRC_BASE+4,d);
           print(OUTPUT,"IE Register read: " & str(d));
-          assert d=32ub"111111110" report "Invalid read value for IE register:" & str(d) severity error;
+          assert d=32ub"111111110" report "Invalid read value for IE register:" & str(d) severity failure;
          
          
           wb_write(SIRC_BASE+4,irq3_mask); -- Enable IRQ 3 (GPIO_RISE)
           wb_write(GPIO_BASE+8,32ub"0"); -- Disable all GPIO Outputs
           wb_write(GPIO_BASE+4,32ub"1"); -- Enable GPIO input 0
           wb_write(GPIO_BASE+X"18",32ub"1"); -- Enable GPIO Rise Interrupt
-          assert sirq_request='0' report "sirq_request is not 0 initially" severity error;
+          assert sirq_request='0' report "sirq_request is not 0 initially" severity failure;
           wb_read(SIRC_BASE,d);
-          assert d=32ub"0" report "IP register is not cleared" severity error;
+          assert d=32ub"0" report "IP register is not cleared" severity failure;
           --- Trigger interrupt
           gpio_i(0) <= '1';
           wait until sirq_request = '1';
           wb_read(SIRC_BASE,d);
-          assert d=irq3_mask report "IP flag not set correctly" & str(d) severity error;
+          assert d=irq3_mask report "IP flag not set correctly" & str(d) severity failure;
           check_sirq_claim(32ux"3");
          
           -- Clear interrupt source
           wb_write(GPIO_BASE+X"18",32ub"0"); -- Disable GPIO Rise Interrupt
           wb_write(GPIO_BASE+X"1C",32ub"1"); -- Clear IRQ Pending flag
           wait for 2*clk_i_period;
-          assert sirq_request = '1' report "sirq_request should still be asserted" severity error;
+          assert sirq_request = '1' report "sirq_request should still be asserted" severity failure;
 
           wb_write(SIRC_BASE+8,32ux"3"); -- confirm IRQ
           wait until rising_edge(clk_i);  
-          assert sirq_request = '0' report "sirq_request not deasserted" severity error;
+          assert sirq_request = '0' report "sirq_request not deasserted" severity failure;
           check_sirq_claim(32ub"0");
 
           print(OUTPUT,"Testing SIRC OK");

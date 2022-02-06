@@ -78,21 +78,22 @@ begin
  wbs_ack_o <=  wbs_cyc_i and wbs_stb_i;
  
 
--- IRQ req and irq number encoder 
+-- IRQ req detection and irq number encoder 
 process(ip_reg) 
-variable tmp : std_logic;
+variable found : std_logic;
 variable max : t_irq_num;
 begin
 
-   tmp := '0';
+   found := '0';
    max := 0;
-   for i in  1 to NUM_IRQ loop
-      tmp := tmp or ip_reg(i);
+   for i in  NUM_IRQ downto 1 loop
       if ip_reg(i)='1' then
          max := i;
+         found := '1';
+         exit;
       end if;    
    end loop;
-   irq_req_o <= tmp;
+   irq_req_o <= found;
    iclaim <= max; 
 
 end process;

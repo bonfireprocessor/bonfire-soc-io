@@ -13,6 +13,10 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
+use work.txt_util.all;
+LIBRARY std;
+USE std.textio.all;
+
 entity bonfire_soc_io is
 generic (
    CLK_FREQUENCY : natural := (96 * 1000000);
@@ -26,13 +30,15 @@ generic (
    ENABLE_GPIO : boolean := true;
 
    ENABLE_SIRC : boolean := false;
-   SIRC_IRQS : natural := 8;
+   SIRC_IRQS : natural := 12;
    UART0_IRC_NUM : natural := 1;
    UART1_IRC_NUM : natural := 2;
    GPIO_RISE_IRC_NUM: natural :=3;
    GPIO_FALL_IRC_NUM: natural :=4;
    GPIO_HIGH_IRC_NUM: natural :=5;
    GPIO_LOW_IRC_NUM: natural :=6;
+   ADITIONAL_SIRC_IRQ_LOW : natural := 7;
+
 
    IRQ_LEGACY_MODE : boolean := true -- Use old IRQ mechanism in parallel
 
@@ -62,6 +68,7 @@ Port(
 
        irq_o: out std_logic_vector(7 downto 0); -- old style "local" irqs
        sirc_irq_o : out std_logic;   -- sirc irq request out 
+       sirc_irq_i : in std_logic_vector(SIRC_IRQS downto ADITIONAL_SIRC_IRQ_LOW);
 
    
        -- Wishbone Slave
@@ -109,11 +116,42 @@ signal uart0_irq, uart1_irq,
 signal sirc_irq_req : std_logic_vector(SIRC_IRQS downto 1);
 
 
-
 function valid_irqnum(i : natural) return boolean is
 begin
     return i >=1 and i <= SIRC_IRQS;
-end function;     
+end function;
+
+function check_sirq_consistency return boolean is 
+type t_irq_assignments is array (sirc_irq_req'range) of boolean;
+variable irq_assignments : t_irq_assignments := (others=>false);
+
+
+   function assign_irq(n : natural) return boolean is
+   begin   
+      if valid_irqnum(n) and  not irq_assignments(n) then          
+        irq_assignments(n) := true;
+        return true;
+      else 
+        return false;
+      end if;      
+   end function;
+
+   begin       
+      assert assign_irq(UART0_IRC_NUM) report "assignment conflict with UART0_IRC_NUM :=" & str(UART0_IRC_NUM) severity failure;
+      assert assign_irq(UART1_IRC_NUM) report "assignment conflict with UART1_IRC_NUM :=" & str(UART1_IRC_NUM) severity failure;
+      assert assign_irq(GPIO_RISE_IRC_NUM) report "assignment conflict with GPIO_RISE_IRC_NUM :=" & str(GPIO_RISE_IRC_NUM) severity failure;
+      assert assign_irq(GPIO_FALL_IRC_NUM) report "assignment conflict with GPIO_FALL_IRC_NUM :=" & str(GPIO_FALL_IRC_NUM) severity failure;
+      assert assign_irq(GPIO_HIGH_IRC_NUM) report "assignment conflict with GPIO_HIGH_IRC_NUM :=" & str(GPIO_HIGH_IRC_NUM) severity failure;
+      assert assign_irq(GPIO_LOW_IRC_NUM) report "assignment conflict with GPIO_LOW_IRC_NUM :=" & str(GPIO_LOW_IRC_NUM) severity failure;
+
+      assert ADITIONAL_SIRC_IRQ_LOW<=SIRC_IRQS report "ADITIONAL_SIRC_IRQ_LOW out of range" severity failure;
+      for i in ADITIONAL_SIRC_IRQ_LOW to SIRC_IRQS loop
+         assert assign_irq(i)  report "assignment conflict with SIRQ(" & str(i) & ")" severity failure;
+      end loop;
+      return  true;
+      
+end function; 
+
 
 component bonfire_spi
     generic (
@@ -155,6 +193,9 @@ end component bonfire_spi;
 
 
 begin
+
+assert ENABLE_SIRC and check_sirq_consistency 
+      report "SIRC IRQ consitency check failed" severity failure;
 
 g_irq_legacy: if IRQ_LEGACY_MODE  generate 
 
