@@ -9,13 +9,13 @@
 -- The Bonfire Processor Project, (c) 2016,2017 Thomas Hornschuh
 
 --  Test Bench for bonfire_soc_io
---  This test bench does not toroughly test the enclosed I/O cores. 
+--  This test bench does not toroughly test the enclosed I/O cores.
 --  It is more intended to check that all modules are wired correctly and can be
 --  addressed. Unit testing on the I/O cores should be done with their test benches
 
 
 
--- License: See LICENSE or LICENSE.txt File in git project root. 
+-- License: See LICENSE or LICENSE.txt File in git project root.
 --------------------------------------------------------------------------------
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
@@ -62,7 +62,7 @@ ARCHITECTURE behavior OF tb_bonfire_soc_io IS
        GPIO_HIGH_IRC_NUM: natural :=5;
        GPIO_LOW_IRC_NUM: natural :=6;
        ADITIONAL_SIRC_IRQ_LOW : natural := 7;
-    
+
        IRQ_LEGACY_MODE : boolean := true -- Use old IRQ mechanism in parallel
     );
 
@@ -73,13 +73,13 @@ ARCHITECTURE behavior OF tb_bonfire_soc_io IS
          uart1_rxd : IN  std_logic;
          gpio_o : out std_logic_vector(NUM_GPIO_BITS-1 downto 0);
          gpio_i : in  std_logic_vector(NUM_GPIO_BITS-1 downto 0);
-         gpio_t : out std_logic_vector(NUM_GPIO_BITS-1 downto 0);  
+         gpio_t : out std_logic_vector(NUM_GPIO_BITS-1 downto 0);
          spi_cs        : out   std_logic_vector(NUM_SPI-1 downto 0);
          spi_clk       : out   std_logic_vector(NUM_SPI-1 downto 0);
          spi_mosi      : out   std_logic_vector(NUM_SPI-1 downto 0);
          spi_miso      : in    std_logic_vector(NUM_SPI-1 downto 0);
          irq_o : OUT  std_logic_vector(7 downto 0);
-         sirc_irq_o : out std_logic;  
+         sirc_irq_o : out std_logic;
 
          clk_i : IN  std_logic;
          rst_i : IN  std_logic;
@@ -171,11 +171,11 @@ ARCHITECTURE behavior OF tb_bonfire_soc_io IS
 BEGIN
 
     -- Instantiate the Unit Under Test (UUT)
-   uut: bonfire_soc_io 
+   uut: bonfire_soc_io
    GENERIC MAP (
     ENABLE_SIRC => TRUE
    )
-   
+
    PORT MAP (
           uart0_txd => uart0_txd,
           uart0_rxd => uart0_rxd,
@@ -319,27 +319,27 @@ BEGIN
 
 
         procedure check_sirq_claim(v: std_logic_vector(wb_dat_i'range)) is
-        variable d : std_logic_vector(wb_dat_i'range);  
+        variable d : std_logic_vector(wb_dat_i'range);
         begin
           wb_read(SIRC_BASE+8,d);
           print(OUTPUT,"Interrupt claim register:" & hstr(d));
-          assert d=v report "Invalid value for interrupt claim register" severity failure;          
-        end procedure;  
+          assert d=v report "Invalid value for interrupt claim register" severity failure;
+        end procedure;
 
         procedure sirc_test is
-        constant irq3_mask : std_logic_vector(wb_dat_i'range) := (3=>'1',others=>'0');  
+        constant irq3_mask : std_logic_vector(wb_dat_i'range) := (3=>'1',others=>'0');
         begin
           print(OUTPUT,"Testing SIRC IE Register");
-          wb_read(SIRC_BASE+4,d);         
-          assert d= 32b"0" report "IE register reset value invalid" severity failure ; 
+          wb_read(SIRC_BASE+4,d);
+          assert d= 32b"0" report "IE register reset value invalid" severity failure ;
           assert sirq_request='0' report "sirq_request is not 0 initially" severity failure;
           check_sirq_claim(32ub"0");
           wb_write(SIRC_BASE+4,X"FFFFFFFF");
           wb_read(SIRC_BASE+4,d);
           print(OUTPUT,"IE Register read: " & str(d));
           assert d=32ub"111111110" report "Invalid read value for IE register:" & str(d) severity failure;
-         
-         
+
+
           wb_write(SIRC_BASE+4,irq3_mask); -- Enable IRQ 3 (GPIO_RISE)
           wb_write(GPIO_BASE+8,32ub"0"); -- Disable all GPIO Outputs
           wb_write(GPIO_BASE+4,32ub"1"); -- Enable GPIO input 0
@@ -353,7 +353,7 @@ BEGIN
           wb_read(SIRC_BASE,d);
           assert d=irq3_mask report "IP flag not set correctly" & str(d) severity failure;
           check_sirq_claim(32ux"3");
-         
+
           -- Clear interrupt source
           wb_write(GPIO_BASE+X"18",32ub"0"); -- Disable GPIO Rise Interrupt
           wb_write(GPIO_BASE+X"1C",32ub"1"); -- Clear IRQ Pending flag
@@ -361,13 +361,13 @@ BEGIN
           assert sirq_request = '1' report "sirq_request should still be asserted" severity failure;
 
           wb_write(SIRC_BASE+8,32ux"3"); -- confirm IRQ
-          wait until rising_edge(clk_i);  
+          wait until rising_edge(clk_i);
           assert sirq_request = '0' report "sirq_request not deasserted" severity failure;
           check_sirq_claim(32ub"0");
 
           print(OUTPUT,"Testing SIRC OK");
-          
-        end procedure;   
+
+        end procedure;
 
 
         variable ctl : std_logic_vector(31 downto 0);
@@ -384,7 +384,7 @@ BEGIN
 
       test_spi_loopback;
 
-      if not SKIP_UART_TEST then 
+      if not SKIP_UART_TEST then
 
         -- UART 0/1 Test
         ctl:=(others=>'0');
@@ -404,7 +404,7 @@ BEGIN
 
         wait until uart0_stop and uart1_stop;
 
-       
+
 
         print(OUTPUT,"UART0 Test captured bytes: " & str(total_count(0)) & " framing errors: " & str(framing_errors(0)));
         assert total_count(0)=TestStr'length+1 and framing_errors(0)=0 severity failure;
@@ -412,19 +412,19 @@ BEGIN
          print(OUTPUT,"UART1 Test captured bytes: " & str(total_count(1)) & " framing errors: " & str(framing_errors(1)));
         assert total_count(1)=TestStr'length+1 and framing_errors(1)=0 severity failure;
 
-    else 
+    else
       print(OUTPUT,"Warning: UART Test skipped");
 
-    end if; 
+    end if;
 
       -- GPIO Test
 
       print(OUTPUT,"Testing GPIO Output");
-      
+
       wb_write(GPIO_BASE+8,X"FFFFFFFF"); -- Output Enable
       wait for clk_i_period*2;
       assert gpio_t = X"00000000" report "GPIO Test, Output enable fail: " & str(gpio_t) severity error;
-      
+
       ctl:=X"00000001";
       for i in 1 to 32 loop
         print(OUTPUT,"Test GPIO with pattern " & str(ctl));

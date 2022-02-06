@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------------
--- 
--- 
+--
+--
 -- Module Name:    sysio - Behavioral
 
 
@@ -28,28 +28,28 @@ library work;
 
 entity simple_irc is
 generic (
-   NUM_IRQ : natural := 8  
+   NUM_IRQ : natural := 8
 );
 Port (
    clk_i: in std_logic;
    rst_i: in std_logic;
-   
+
    irq_in : in  std_logic_vector(NUM_IRQ downto 1);
-  
-   irq_req_o: out std_logic ; 
-   
-   -- Slave Interface 
-   
+
+   irq_req_o: out std_logic ;
+
+   -- Slave Interface
+
    wbs_cyc_i : in std_logic ;
    wbs_stb_i : in std_logic ;
    wbs_we_i : in std_logic ;
-  
+
    wbs_ack_o : out std_logic ;
    wbs_adr_i : in std_logic_vector(3 downto 2);
-   
+
    wbs_dat_o : out std_logic_vector(31 downto 0);
    wbs_dat_i : in std_logic_vector(31 downto 0)
-);   
+);
 end simple_irc;
 
 architecture Behavioral of simple_irc is
@@ -76,10 +76,10 @@ end;
 begin
 
  wbs_ack_o <=  wbs_cyc_i and wbs_stb_i;
- 
 
--- IRQ req detection and irq number encoder 
-process(ip_reg) 
+
+-- IRQ req detection and irq number encoder
+process(ip_reg)
 variable found : std_logic;
 variable max : t_irq_num;
 begin
@@ -91,39 +91,39 @@ begin
          max := i;
          found := '1';
          exit;
-      end if;    
+      end if;
    end loop;
    irq_req_o <= found;
-   iclaim <= max; 
+   iclaim <= max;
 
 end process;
 
 -- Register read
 
 process(all)  --wbs_cyc_i,wbs_stb_i,wbs_adr_i, wbs_we_i, ie_reg,ip_reg,iclaim)
-variable temp_vector : std_logic_vector(NUM_IRQ downto 0);   
+variable temp_vector : std_logic_vector(NUM_IRQ downto 0);
 begin
    if wbs_cyc_i='1' and wbs_stb_i = '1' and wbs_we_i = '0' then
       case wbs_adr_i is
-        when "00" => 
+        when "00" =>
            temp_vector := (ip_reg&'0'); -- pad bit 0
            wbs_dat_o <= fill_bits(temp_vector);
         when "01" =>
            temp_vector := ie_reg&'0';  -- pad bit 0
-           wbs_dat_o <= fill_bits(temp_vector); 
+           wbs_dat_o <= fill_bits(temp_vector);
         when "10" =>
-           wbs_dat_o <= std_logic_vector(to_unsigned(iclaim,wbs_dat_o'length));  
+           wbs_dat_o <= std_logic_vector(to_unsigned(iclaim,wbs_dat_o'length));
         when others =>
           wbs_dat_o <= (others => 'X');
       end case;
-  end if;  
-end process;  
+  end if;
+end process;
 
 
 
- process(clk_i) 
+ process(clk_i)
  variable int_num : t_irq_num;
- begin  
+ begin
    if rising_edge(clk_i) then
      if rst_i='1' then
        ie_reg <=  (others=>'0');
@@ -132,31 +132,31 @@ end process;
      elsif wbs_stb_i='1' and wbs_cyc_i = '1' and wbs_we_i='1' then
         -- Write Registers
         case wbs_adr_i is
-        
+
           when "01" =>
              ie_reg <= wbs_dat_i(ie_reg'range);
-         
+
           when "10" =>
              -- Interrupt completion
-             if unsigned(wbs_dat_i(5 downto 0))<= NUM_IRQ then 
+             if unsigned(wbs_dat_i(5 downto 0))<= NUM_IRQ then
                 int_num:= to_integer(unsigned(wbs_dat_i(5 downto 0)));
                 ip_reg(int_num) <= '0';
-             end if;    
-                 
+             end if;
+
           when others =>
-             -- nothing 
-                    
+             -- nothing
+
         end case;
-            
-      else  
+
+      else
          --- Interrupt sensing, ip_reg is "sticky"
-         for i in 1 to NUM_IRQ loop 
-            ip_reg(i) <= (ie_reg(i) and irq_in(i)) or ip_reg(i); 
-         end loop;    
-     end if;  
- 
+         for i in 1 to NUM_IRQ loop
+            ip_reg(i) <= (ie_reg(i) and irq_in(i)) or ip_reg(i);
+         end loop;
+     end if;
+
    end if;
- 
+
  end process;
 
 

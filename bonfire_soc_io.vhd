@@ -14,8 +14,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 
 use work.txt_util.all;
-LIBRARY std;
-USE std.textio.all;
+
 
 entity bonfire_soc_io is
 generic (
@@ -47,7 +46,7 @@ Port(
        -- UART0 signals:
        uart0_txd : out std_logic;
        uart0_rxd : in  std_logic :='1';
-       
+
 
         -- UART1 signals:
        uart1_txd : out std_logic;
@@ -67,10 +66,10 @@ Port(
 
 
        irq_o: out std_logic_vector(7 downto 0); -- old style "local" irqs
-       sirc_irq_o : out std_logic;   -- sirc irq request out 
+       sirc_irq_o : out std_logic;   -- sirc irq request out
        sirc_irq_i : in std_logic_vector(SIRC_IRQS downto ADITIONAL_SIRC_IRQ_LOW);
 
-   
+
        -- Wishbone Slave
        clk_i: in std_logic;
        rst_i: in std_logic;
@@ -109,8 +108,8 @@ signal m_sel_o :  t_wbsel_a(0 to slaves-1);
 signal m_ack_i :  std_logic_vector(0 to slaves-1);
 
 -- IRQs
-signal uart0_irq, uart1_irq, 
-       gpio_fall_irq,gpio_high_irq, 
+signal uart0_irq, uart1_irq,
+       gpio_fall_irq,gpio_high_irq,
        gpio_low_irq, gpio_rise_irq : std_logic;
 
 signal sirc_irq_req : std_logic_vector(SIRC_IRQS downto 1);
@@ -121,22 +120,22 @@ begin
     return i >=1 and i <= SIRC_IRQS;
 end function;
 
-function check_sirq_consistency return boolean is 
+function check_sirq_consistency return boolean is
 type t_irq_assignments is array (sirc_irq_req'range) of boolean;
 variable irq_assignments : t_irq_assignments := (others=>false);
 
 
    function assign_irq(n : natural) return boolean is
-   begin   
-      if valid_irqnum(n) and  not irq_assignments(n) then          
+   begin
+      if valid_irqnum(n) and  not irq_assignments(n) then
         irq_assignments(n) := true;
         return true;
-      else 
+      else
         return false;
-      end if;      
+      end if;
    end function;
 
-   begin       
+   begin
       assert assign_irq(UART0_IRC_NUM) report "assignment conflict with UART0_IRC_NUM :=" & str(UART0_IRC_NUM) severity failure;
       assert assign_irq(UART1_IRC_NUM) report "assignment conflict with UART1_IRC_NUM :=" & str(UART1_IRC_NUM) severity failure;
       assert assign_irq(GPIO_RISE_IRC_NUM) report "assignment conflict with GPIO_RISE_IRC_NUM :=" & str(GPIO_RISE_IRC_NUM) severity failure;
@@ -149,8 +148,8 @@ variable irq_assignments : t_irq_assignments := (others=>false);
          assert assign_irq(i)  report "assignment conflict with SIRQ(" & str(i) & ")" severity failure;
       end loop;
       return  true;
-      
-end function; 
+
+end function;
 
 
 component bonfire_spi
@@ -194,20 +193,20 @@ end component bonfire_spi;
 
 begin
 
-assert ENABLE_SIRC and check_sirq_consistency 
+assert ENABLE_SIRC and check_sirq_consistency
       report "SIRC IRQ consitency check failed" severity failure;
 
-g_irq_legacy: if IRQ_LEGACY_MODE  generate 
+g_irq_legacy: if IRQ_LEGACY_MODE  generate
 
     irq_o(7) <= uart0_irq;
     irq_o(6) <= uart1_irq;
     irq_o(5 downto 0) <= (others=>'0');
 
-else generate 
-    
+else generate
+
     irq_o(7 downto 0) <= (others=>'0');
 
-end generate;    
+end generate;
 
 
 Inst_io_intercon: entity work.io_intercon PORT MAP(
@@ -407,7 +406,7 @@ g_no_gpio: if not ENABLE_GPIO generate
    gpio_fall_irq <= '0';
    gpio_rise_irq <= '0';
    gpio_high_irq <= '0';
-   gpio_low_irq  <= '0'; 
+   gpio_low_irq  <= '0';
 end generate;
 
 
@@ -419,7 +418,7 @@ g_sirc: if ENABLE_SIRC generate
     )
 
     PORT MAP(
-           
+
             clk_i => clk_i,
             rst_i => rst_i,
             wbs_cyc_i => m_cyc_o(4),
@@ -433,7 +432,7 @@ g_sirc: if ENABLE_SIRC generate
 
             irq_in => sirc_irq_req,
             irq_req_o => sirc_irq_o
-           
+
         );
 
 
@@ -442,30 +441,30 @@ g_sirc: if ENABLE_SIRC generate
           sirc_irq_req <= (others => '0');
           if valid_irqnum(UART0_IRC_NUM) then
              sirc_irq_req(UART0_IRC_NUM) <= uart0_irq;
-          end if;   
+          end if;
           if valid_irqnum(UART1_IRC_NUM) then
              sirc_irq_req(UART1_IRC_NUM) <= uart1_irq;
-          end if;   
+          end if;
           if valid_irqnum(GPIO_RISE_IRC_NUM) then
              sirc_irq_req(GPIO_RISE_IRC_NUM) <= gpio_rise_irq;
-          end if; 
+          end if;
           if valid_irqnum(GPIO_FALL_IRC_NUM) then
              sirc_irq_req(GPIO_FALL_IRC_NUM) <= gpio_fall_irq;
-          end if; 
+          end if;
           if valid_irqnum(GPIO_HIGH_IRC_NUM) then
              sirc_irq_req(GPIO_HIGH_IRC_NUM) <= gpio_high_irq;
-          end if; 
+          end if;
           if valid_irqnum(GPIO_LOW_IRC_NUM) then
              sirc_irq_req(GPIO_LOW_IRC_NUM) <= gpio_low_irq;
-          end if; 
-            
-        end process;     
+          end if;
 
- else generate 
+        end process;
+
+ else generate
     sirc_irq_o <= '0';
     m_ack_i(4) <= m_cyc_o(4) and  m_stb_o(4);
-   
- end generate;    
+
+ end generate;
 
 
 
